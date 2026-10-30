@@ -1,14 +1,14 @@
-# Praktik 4: Investigasi dan Perbaikan Bug
+# Pertemuan 13 - Debugging dan Testing
 
-## Baseline sebelum perbaikan
+**Nama:** Iqhsan Saleh  
+**NIM:** 2225250021  
+**Kelas:** 3A
 
-Program awal dijalankan tanpa perubahan dengan perintah:
+## Kasus
 
-```powershell
-python praktik/praktik_4_debugging.py
-```
+Program pada `praktik/praktik_4_debugging.py` memproses data nilai mahasiswa melalui tiga fungsi: menghitung rata-rata, menentukan status kelulusan dengan batas 60, dan mencari nilai tertinggi. Program awal memiliki tiga bug logika. Pengujian dilakukan dengan test case untuk membuktikan perilaku yang salah sebelum perbaikan.
 
-Output aktual:
+Output aktual program awal:
 
 ```text
 Rata-rata: 60.0
@@ -16,44 +16,32 @@ Status 60: Tidak lulus
 Tertinggi: 0
 ```
 
-## Test reproduksi
+## Test Case
 
-Test dijalankan dari root proyek:
+Test awal dijalankan sebelum perbaikan. T6 merupakan test tambahan untuk memeriksa data yang seluruh nilainya negatif.
 
-```powershell
-python -m unittest discover -s praktik -p 'test_praktik_4_debugging.py' -v
-```
-
-| ID | Input | Expected | Aktual sebelum perbaikan | Hasil awal |
-|---|---|---:|---:|---|
+| ID | Input | Expected | Actual Awal | Status |
+|---|---|---|---|---|
 | T1 | Rata-rata `[80, 60, 90, 70]` | `75.0` | `60.0` | FAIL |
 | T2 | Rata-rata `[100, 80]` | `90.0` | `36.0` | FAIL |
-| T3 | Status `60` | `Lulus` | `Tidak lulus` | FAIL |
-| T4 | Status `59` | `Tidak lulus` | `Tidak lulus` | PASS |
+| T3 | Status nilai `60` | `Lulus` | `Tidak lulus` | FAIL |
+| T4 | Status nilai `59` | `Tidak lulus` | `Tidak lulus` | PASS |
 | T5 | Tertinggi `[80, 60, 90, 70]` | `90` | `0` | FAIL |
 | T6 | Tertinggi `[-8, -2, -5]` | `-2` | `-8` | FAIL |
 
-T1 sampai T5 adalah test minimum praktik. T6 ditambahkan untuk memeriksa bahwa pencarian nilai tertinggi juga benar saat semua nilai negatif.
+## Bug Report
 
-## Laporan bug
+| Bug ID | Gejala | Test Case | Lokasi | Akar Penyebab | Perbaikan |
+|---|---|---|---|---|---|
+| B01 | Rata-rata tidak sesuai jumlah data. | T1 menghasilkan `60.0`; T2 menghasilkan `36.0`. | `praktik/praktik_4_debugging.py`, `hitung_rata_rata` | Jumlah selalu dibagi 5, meskipun jumlah elemen bukan lima. | Bagi `sum(nilai)` dengan `len(nilai)`. |
+| B02 | Nilai tepat 60 dinyatakan tidak lulus. | T3 gagal; T4 tetap benar. | `praktik/praktik_4_debugging.py`, `status` | Kondisi `nilai > 60` salah ketika nilainya sama dengan 60. | Ganti menjadi `nilai >= 60`. |
+| B03 | Fungsi tidak menemukan nilai terbesar. | T5 menghasilkan `0`; T6 menghasilkan `-8`. | `praktik/praktik_4_debugging.py`, `nilai_tertinggi` | Nilai awal `0` tidak sesuai untuk semua rentang input dan kondisi `x < tertinggi` mencari nilai yang lebih kecil, bukan lebih besar. | Mulai dari elemen pertama dan perbarui jika `x > tertinggi`. |
 
-| Bug ID | Gejala dan test bukti | Lokasi | Akar penyebab | Perbaikan |
-|---|---|---|---|---|
-| B01 | Rata-rata terlalu kecil; T1 mendapat `60.0` dan T2 mendapat `36.0`. | `praktik/praktik_4_debugging.py`, fungsi `hitung_rata_rata`, baris 2 | Jumlah selalu dibagi `5`, tidak peduli jumlah elemen. Pada T1 jumlahnya `300`, tetapi `300 / 5 = 60`; pada T2 `180 / 5 = 36`. | Bagi jumlah dengan `len(nilai)`. |
-| B02 | Nilai ambang 60 dinyatakan tidak lulus; T3 gagal, sedangkan T4 lulus. | `praktik/praktik_4_debugging.py`, fungsi `status`, baris 5 | Kondisi `nilai > 60` bernilai salah ketika `nilai` tepat 60. | Gunakan `nilai >= 60` agar nilai batas termasuk lulus. |
-| B03 | Nilai tertinggi untuk data positif menjadi `0`; T5 gagal. | `praktik/praktik_4_debugging.py`, fungsi `nilai_tertinggi`, baris 11-14 | Variabel dimulai dari 0 dan kondisi `x < tertinggi` justru mencari nilai yang lebih kecil. Semua input T5 positif, sehingga kondisi tidak pernah benar dan hasil tetap 0. | Mulai dari elemen pertama, lalu perbarui jika `x > tertinggi`. Ini juga menangani daftar yang seluruh nilainya negatif (T6). |
+Bukti tracing: pada T1, jumlah data adalah `300`, sehingga pembagi tetap menghasilkan `300 / 5 = 60`, bukan `75`. Pada T3, `60 > 60` bernilai `False`. Pada T5, seluruh nilai positif gagal dibandingkan dengan kondisi `x < 0`, sehingga nilai awal 0 tidak berubah. Pada T6, kondisi lama justru memilih `-8` sebagai nilai terkecil.
 
-## Bukti tracing
+## Retest
 
-- B01 / T1: `sum([80, 60, 90, 70])` adalah `300`; pembagi yang tertulis `5` menghasilkan `60.0`, bukan `75.0`. T2: `180 / 5` menghasilkan `36.0`, bukan `90.0`.
-- B02 / T3: saat `nilai` adalah `60`, evaluasi `60 > 60` menghasilkan `False`, sehingga fungsi mengembalikan `"Tidak lulus"`.
-- B03 / T5: `tertinggi` mulai `0`; nilai `80`, `60`, `90`, dan `70` semuanya gagal pada kondisi `x < 0`, sehingga tidak ada pembaruan dan hasil `0`. Pada T6, nilai pertama `-8` menggantikan `0`, tetapi `-2` dan `-5` tidak lebih kecil dari `-8`, sehingga hasilnya `-8` (nilai terkecil), bukan `-2`. Pada perbaikan, nilai awal adalah elemen pertama dan nilai `90` menggantikannya karena `90 > 80`.
-
-## Retest setelah perbaikan
-
-Seluruh test dijalankan kembali dengan perintah yang sama. Hasil: **6 test PASS, 0 FAIL**. T1-T5 lulus sesuai expected; T4 yang sudah PASS sebelum perbaikan tetap PASS, sehingga tidak ada regresi pada test itu. T6 juga lulus untuk data negatif.
-
-Output program setelah perbaikan:
+Setelah perbaikan, seluruh enam test dijalankan kembali: **6 PASS, 0 FAIL**. Test T4 yang telah lulus sebelum perbaikan tetap lulus. Output program setelah perbaikan:
 
 ```text
 Rata-rata: 75.0
@@ -61,7 +49,20 @@ Status 60: Lulus
 Tertinggi: 90
 ```
 
-## Riwayat Git
+## Cara Menjalankan
 
-- `6c61db3` - `Praktik 4: rekam baseline dan test reproduksi` menyimpan program awal bermasalah dan test yang menunjukkan kegagalan.
-- Commit perbaikan berikutnya menyimpan perubahan kode dan dokumentasi hasil retest.
+Jalankan program dari direktori root proyek:
+
+```bash
+python3 praktik/praktik_4_debugging.py
+```
+
+Jalankan seluruh test praktik:
+
+```bash
+python3 -m unittest discover -s praktik -p 'test_praktik_4_debugging.py' -v
+```
+
+## Refleksi
+
+Teknik yang paling membantu adalah membuat test case untuk nilai batas dan variasi input, lalu menelusuri perubahan nilai variabel pada fungsi. Test memperlihatkan input yang gagal secara spesifik, sedangkan tracing menjelaskan akar penyebabnya. Setelah perbaikan, menjalankan ulang seluruh test memastikan bug tertangani tanpa merusak kasus yang sebelumnya sudah benar.
