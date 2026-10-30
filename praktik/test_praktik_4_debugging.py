@@ -19,6 +19,9 @@ class TestPemrosesanNilai(unittest.TestCase):
     def test_t5_nilai_tertinggi(self):
         self.assertEqual(nilai_tertinggi([80, 60, 90, 70]), 90)
 
+    def test_t6_nilai_tertinggi_semua_negatif(self):
+        self.assertEqual(nilai_tertinggi([-8, -2, -5]), -2)
+
 
 if __name__ == "__main__":
     unittest.main()
